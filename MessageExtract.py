@@ -86,14 +86,9 @@ def fileWrite(inputList, filename, mode = "at", encoding = "utf8"):
 # HL7 processing code
  
 class segment:
-    fields = {}
     fieldDelim = "|"
-    segment = ""
     def toString():
-        segmentText = segment + fieldDelim
-        for k in fields:
-            segmentText = fields[k] + fieldDelim
-        return segmentText
+        return
                                
 # End HL7 processing code
  
@@ -143,8 +138,9 @@ def menu():
             i = int(choice)
             if i > 0 and i <= len(menuElements):
                 key = getDictionaryKey(i-1, menuElements)
-                menuAction(key)
-                continue
+                if(key is not None):
+                    menuAction(key)
+                    continue
         break
     os.system("cls")
  
