@@ -98,6 +98,34 @@ def buildSegment(segName, fieldNames, fields, segmentLength):
             segment[index] = fields[fieldName]
     return fieldDelimiter.join(segment) + segmentDelimiter      
 
+def buildTxa(fields):
+    segmentLength = 24
+    fieldNames = {"Set ID":1
+    , "Document Type":2
+    , "Document Content Presentation":3
+    , "Activity Date/Time":4
+    , "Primary Activity Provider":5
+    , "Origination Date/Time":6
+    , "Transcription Date/Time":7
+    , "Edit Date/Time":8
+    , "Originator Code/Name":9
+    , "Assigned Document Authenticator":10
+    , "Transcriptionist":11
+    , "Unique Document Number":12
+    , "Parent Document Number":13
+    , "Placer Order Number":14
+    , "Filler Order Number":15
+    , "Unique Document File Name":16
+    , "Document Completion Status":17
+    , "Document Confidentiality Status":18
+    , "Document Availability Status":19
+    , "Document Storage Status":20
+    , "Document Change Reason":21
+    , "Authentication Person, Time Stamp":22
+    , "Distributed Copies":23
+    }
+    return buildSegment("TXA", fieldNames, fields, segmentLength)
+
 def buildMsh(fields):
     segmentLength = 13
     fieldNames = {"Encoding Characters":1
@@ -117,7 +145,7 @@ def buildMsh(fields):
 
 def buildPid(fields):
     segmentLength = 31
-    fieldNames = {"Set ID – Patient ID":1
+    fieldNames = {"Set ID":1
     , "External ID":2
     , "Internal ID":3
     , "Alternate ID":4
@@ -142,11 +170,119 @@ def buildPid(fields):
     return buildSegment("PID", fieldNames, fields, segmentLength)
 
 def buildObr(fields):
-    return
+    segmentLength = 44
+    fieldNames = {"Set ID":1
+    , "Placer Order Number":2
+    , "Filler Order Number":3
+    , "Universal Service ID":4
+    , "Priority":5
+    , "Requested Date/Time":6
+    , "Observation Date/Time":7
+    , "Observation End Date/Time":8
+    , "Collection Volume":9
+    , "Collector Identifier":10
+    , "Specimen Action Code":11
+    , "Danger Code":12
+    , "Relevant Clinical info":13
+    , "Specimen Received Date/Time":14
+    , "Specimen Source":15
+    , "Ordering Provider":16
+    , "Order Callback Phone Number":17
+    , "Placer field 1":18
+    , "Placer field 2":19
+    , "Filler Field 1":20
+    , "Filler Field 2":21
+    , "Request Change Date/Time":22
+    , "Change to Practice":23
+    , "Diagnostic Serv Sect ID":24
+    , "Result Status":25
+    , "Parent Result":26
+    , "Quantity/Timing":27
+    , "Result Copies To":28
+    , "Parent":29
+    , "Transportaion Mode":30
+    , "Reason for Study":31
+    , "Principal Result Interpreter":32
+    , "Assistant Result Interpreter":33
+    , "Technician":34
+    , "Transcriptionist":35
+    , "Scheduled Date/Time":36
+    , "Number of Sample Containers":37
+    , "Transport Logistics of Collected Sample":38
+    , "Collector's Comment":39
+    , "Transport Arrangement Responsibility":40
+    , "Transport Arranged": 41
+    , "Escort Required":42
+    , "Planned Patient Transport Comment":43
+    }
+    return buildSegment("OBR", fieldNames, fields, segmentLength)
+
+def buildObx(fields):
+    segmentLength = 18
+    fieldNames = {"Set ID":1
+    , "Value Type":2
+    , "Observation Identifier":3
+    , "Observation Sub-Id":4
+    , "Observation Value":5
+    , "Units":6
+    , "Reference Range":7
+    , "Abnormal Flags":8
+    , "Probability":9
+    , "Nature of Abnormal Test":10
+    , "Observation Result Status":11
+    , "Data Last Observation Normal Values":12
+    , "User Defined Access Checks":13
+    , "Date/Time of the Observation":14
+    , "Producer's Id":15
+    , "Responsible Observer":16
+    , "Observation Method":17
+    }
+    return buildSegment("OBX", fieldNames, fields, segmentLength)
+
+def buildObxs(obxs):
+    obxSet = []
+    for obx in obxs:
+        obxSet.append(buildObx(obx))
+    return "".obxSet.join()
+
+def buildPv1(fields):
+    segmentLength = 53
+    fieldNames = {"Set ID":1
+    , "Patient Class":2
+    , "Patient Location":3
+    , "Admission Type":4
+    , "Preadmit Number":5
+    , "Prior Patient Location":6
+    , "Attending Doctor":7
+    , "Referring Doctor":8
+    , "Consulting Doctor":9
+    , "Hospital Service":10
+    , "Temporary Location":11
+    , "Preadmit Test Indicator":12
+    , "Re-admission Indicator":13
+    , "Admit Source":14
+    , "Ambulance Status":15
+    , "Vip Indicator":16
+    , "Admitting Doctor":17
+    , "Patient Type":18
+    , "Visit Number":19
+    , "Financial Class":20
+    , "Charge Price Indicator":21
+    , "Courtesy Code":22
+    , "Credit Rating":23
+    , "Contract Code":24
+    , "Contract Effective Date":25
+    , "Contract Amount":26
+    , "Contract Period":27
+    , "Interest Code":28
+    , "Transfer to Bad Debt Code":29
+    , "Transfer to Bad Debt Date":30
+    }
+    return buildSegment("PV1", fieldNames, fields, segmentLength)
 
 def indexCompare(indexes, cols, indexValues):
     for i in indexes:
-        if(cols[i] != indexValues[i])
+        if(cols[i] != indexValues[i]):
             return True
     return False
 
@@ -157,21 +293,26 @@ def messageFilter(message, filters):
             break
     return message
 
-def csvToHl7Main(inputFilename, outputFilename, hl7Generator, filters, expectedColCount, *grouper):
+def removeNulls(cols):
+    for col in cols:
+        if col.upper() == "NULL":
+            col = ""
+    return cols
+
+def csvToHl7Main(inputFilename, outputFilename, hl7Generator, filters, expectedColCount, grouperIndexes):
     isFirstLine = True
-    grouperIndexes = []
     grouperIndexValues = []
     colSet = []
     message = ""
     messageCount = 0
     messages = []
-    for i in grouper:
-        grouperIndexes.append(int(i))
     with open(inputFilename, "r", "utf-8-sig") as inputfile:
         for row in inputfile:
+            row = row.split
             cols = row.split(colDelimiter)
             if(len(cols) < expectedColCount):
                 continue
+            cols = removeNulls(cols)
             if(isFirstLine == False):
                 if(indexCompare(grouperIndexes, cols, grouperIndexValues)):
                     message = hl7Generator(colSet)
@@ -196,8 +337,89 @@ def csvToHl7Main(inputFilename, outputFilename, hl7Generator, filters, expectedC
         if(message != ""):
             messages.append(message)
         fileWrite(messages, outputFilename)
+
+def parseMeditechName(name):
+    nameArray = []
+    tuple = name.split(",")
+    lastName = tuple[0]
+    if(len(tuple) < 2):
+        return [lastName]
+    firstMiddle = tuple[1]
+    lastThree = firstMiddle[-3:]
+    lastThree = lastThree.strip().upper()
+    if(lastThree == "JR"
+    or lastThree == "SR"
+    or lastThree == "II"
+    or lastThree == "IV"
+    or lastThree == "VI"
+    or lastThree == "III"):
+        firstMiddle = firstMiddle[:-3]
+    lastTwo = firstMiddle[-2:]
+
+    if(lastTwo[:1] == " "):
+        middle = lastTwo[-1:]
+        firstMiddle = firstMiddle[:-2] 
+        return lastName + "^" + firstMiddle + "^" + middle
+    return lastName + "^" + firstMiddle
                                
 # End HL7 processing code
+
+# MT Transcription
+
+def mtTranscription():
+    inputFilename = "Transcription Results Extract Small Scale.txt"
+    outputFilename = "FF Meditech Transcription HL7.txt"
+    csvToHl7Main(inputFilename, outputFilename, mtTranscriptionGenerator, [], 19, [13])
+
+def mtTranscriptionGenerator(rowSet):
+    firstLine = True
+    pidFields = {}
+    pv1Fields = {}
+    txaFields = {}
+    obxs = []
+    count = 0
+    dictatingProvider = ""
+    for row in rowSet:
+        count += 1
+        for col in row:
+            if(firstLine == True):
+                # PID
+                pidFields["Set ID"] = "1"
+                pidFields["Patient Name"] = parseMeditechName(row[1])
+                pidFields["Sex"] = row[3]
+                pidFields["Date/Time of Birth"] = 
+                pidFields["Internal ID"] = 
+                pidFields["Patient Account Number"] = row[6]
+                # PV1
+                pv1Fields["Set ID"] = 
+                pv1Fields["Patient Location"] = row[5]
+                pv1Fields["Visit Number"] = row[6]
+                # TXA
+                txaFields["Set ID"] = "1"
+                txaFields["Document Type"] = row[7]
+                txaFields["Primary Activity Provider"] =
+                txaFields["Origination Date/Time"] =
+                txaFields["Transcription Date/Time"] = 
+                txaFields["Activity Date/Time"] = 
+                txaFields["Originator Code/Name"] = 
+                txaFields["Unique Document Number"] = "^^" + row[11]
+                txaFields["Document Availability Status"] = "AV"
+                txaFields["Document Completion Status"] = "AU"
+                dictatingProvider = row[19]
+            obxFields = {}
+            obxFields["Set ID"] = str(count)
+            obxFields["Value Type"] = "TX"
+            obxFields["Observation Value"] = row[18]
+            obxs.append(obxFields)
+    count += 1
+    obxFields = {}
+    obxFields["Set ID"] = str(count)
+    obxFields["Value Type"] = "TX"
+    obxFields["Observation Value"] = "<Electronically signed by " + dictatingProvider + " >"
+    obxs.append(obxFields)
+    return
+
+# End MT Transcription
  
 # MT Allergies
  
@@ -237,6 +459,7 @@ def main():
 menuElements = {"MT General Lab (Discrete)":mtGenLabDiscreteResult
     , "MT General Lab (Non - Discrete)":mtGenLabNonDiscreteResult
     , "MT Allergy":mtAllergyResult
+    , "MT Transcription":mtTranscription
     }
  
 def menu():
