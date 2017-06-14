@@ -63,17 +63,14 @@ def queryTable(tableObj, **kwargs):
     if tableObj is not None\
     and kwargs is not None:
         for row in tableObj:
-            kwargCount = len(kwargs.iteritems())
+            kwargCount = len(kwargs.items())
             matchCount = 0
-            for key, value in kwargs.iteritems():
+            for key, value in kwargs.items():
                 if key in row and row[key] == value:
                     matchCount += 1
                     if(matchCount == kwargCount):
                         return row
-    return None
- 
-# Number of messages to print per file write
-messagePrintCount = 5000         
+    return None         
                
 # Function to write to file
 def fileWrite(inputList, filename, mode = "at", encoding = "utf8"):
@@ -84,11 +81,121 @@ def fileWrite(inputList, filename, mode = "at", encoding = "utf8"):
 # End Common
  
 # HL7 processing code
- 
-class segment:
-    fieldDelim = "|"
-    def toString():
-        return
+
+# Number of messages to print per file write
+messagePrintCount = 5000
+
+# Csv file delimiter
+colDelimiter = "\t"
+
+def buildSegment(segName, fieldNames, fields, segmentLength):
+    fieldDelimiter = "|"
+    segmentDelimiter = "\r"
+    segment = [""] * segmentLength
+    segment[0] = segName
+    for fieldName, index in fieldNames.items():
+        if fieldName in fields:
+            segment[index] = fields[fieldName]
+    return fieldDelimiter.join(segment) + segmentDelimiter      
+
+def buildMsh(fields):
+    segmentLength = 13
+    fieldNames = {"Encoding Characters":1
+        , "Sending Application":2
+        , "Sending Facility":3
+        , "Receiving Application":4
+        , "Receiving Facility":5
+        , "Date/Time of Message":6
+        , "Security":7
+        , "Message Type":8
+        , "Message Control Id":9
+        , "Processing Id":10
+        , "Version Id":11
+        , "Sequence Number":12
+        }
+    return buildSegment("MSH", fieldNames, fields, segmentLength)
+
+def buildPid(fields):
+    segmentLength = 31
+    fieldNames = {"Set ID – Patient ID":1
+    , "External ID":2
+    , "Internal ID":3
+    , "Alternate ID":4
+    , "Patient Name":5
+    , "Mother's Maiden Name":6
+    , "Date/Time of Birth":7
+    , "Sex":8
+    , "Patient Alias": 9
+    , "Race":10
+    , "Patient Address":11
+    , "Country Code": 12
+    , "Home Phone":13
+    , "Business Phone":14
+    , "Primary Language":15
+    , "Marital Status":16
+    , "Religion":17
+    , "Patient Account Number":18
+    , "SSN":19
+    , "Patient Death Date and Time":29
+    , "Patient Death Indicator":30
+    }
+    return buildSegment("PID", fieldNames, fields, segmentLength)
+
+def buildObr(fields):
+    return
+
+def indexCompare(indexes, cols, indexValues):
+    for i in indexes:
+        if(cols[i] != indexValues[i])
+            return True
+    return False
+
+def messageFilter(message, filters):
+    for filter in filters:
+        message = filter(message)
+        if(message == ""):
+            break
+    return message
+
+def csvToHl7Main(inputFilename, outputFilename, hl7Generator, filters, expectedColCount, *grouper):
+    isFirstLine = True
+    grouperIndexes = []
+    grouperIndexValues = []
+    colSet = []
+    message = ""
+    messageCount = 0
+    messages = []
+    for i in grouper:
+        grouperIndexes.append(int(i))
+    with open(inputFilename, "r", "utf-8-sig") as inputfile:
+        for row in inputfile:
+            cols = row.split(colDelimiter)
+            if(len(cols) < expectedColCount):
+                continue
+            if(isFirstLine == False):
+                if(indexCompare(grouperIndexes, cols, grouperIndexValues)):
+                    message = hl7Generator(colSet)
+                    message = messageFilter(message, filters)
+                    if(message != ""):
+                        messages.append(message)
+                        messageCount += 1
+                        if(messageCount >= messagePrintCount):
+                            fileWrite(messages, outputFilename)
+                            messages = []
+                            messageCount = 0
+                    colSet = []
+            else:
+                isFirstLine = False
+            colSet.append(cols)
+            grouperIndexValues = []
+            for i in grouperIndexes:
+                grouperIndexValues.append(cols[i])
+    if(len(colSet) > 0):
+        message = hl7Generator(colSet)
+        message = messageFilter(message, filters)
+        if(message != ""):
+            messages.append(message)
+        fileWrite(messages, outputFilename)
                                
 # End HL7 processing code
  
@@ -96,6 +203,13 @@ class segment:
  
 def mtAllergyResult():
     return
+
+def mtAllergyGenerator(rowSet):
+    message = ""
+    for row in rowSet:
+        for col in row:
+            continue
+    return message
  
 # End MT Allgeries
  
@@ -120,10 +234,10 @@ def mtGenLabNonDiscreteResult():
 def main():
     menu()
  
-menuElements = {"MT General Lab (Discrete)":mtGenLabDiscreteResult\
-, "MT General Lab (Non - Discrete)":mtGenLabNonDiscreteResult\
-, "MT Allergy":mtAllergyResult\
-}
+menuElements = {"MT General Lab (Discrete)":mtGenLabDiscreteResult
+    , "MT General Lab (Non - Discrete)":mtGenLabNonDiscreteResult
+    , "MT Allergy":mtAllergyResult
+    }
  
 def menu():
     while (True):
